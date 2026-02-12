@@ -1,0 +1,8 @@
+{
+  "patient_name": "Sagar Tiwari",
+  "history": [
+    {"date": "2023-01", "hb1ac": 5.4, "glucose": 95},
+    {"date": "2024-01", "hb1ac": 5.8, "glucose": 110},
+    {"date": "2025-06", "hb1ac": 6.1, "glucose": 169}
+  ]
+}
