@@ -17,8 +17,7 @@ Usage:
 """
 
 from typing import Callable, List, Dict, Any, Optional
-from schema import SmartSummary, AbnormalFinding
-
+from schema import SmartSummary, AbnormalReading
 
 class Rule:
     """Single declarative rule: condition + actions"""
@@ -91,8 +90,8 @@ class RulesEngine:
             ),
             
             Rule(
-                name="high_risk_insight_header",
-                condition=lambda s: s.overall_assessment.risk_level in ["High", "Critical"],
+                name="render_insight_header",
+                condition=lambda s: True, # Always render header to show patient info
                 priority=90,
                 actions=[
                     Action(
@@ -109,7 +108,7 @@ class RulesEngine:
             
             Rule(
                 name="render_abnormal_findings",
-                condition=lambda s: len(s.abnormal_findings) > 0,
+                condition=lambda s: len(s.clinical_summary.abnormal_readings) > 0,
                 priority=80,
                 actions=[]  # Will be dynamically built in apply_rules
             ),
@@ -150,7 +149,7 @@ class RulesEngine:
             
             Rule(
                 name="render_action_timeline",
-                condition=lambda s: len(s.follow_up_plan) > 0,
+                condition=lambda s: len(s.management_plan.follow_up_tests) > 0,
                 priority=60,
                 actions=[
                     Action(
@@ -168,7 +167,7 @@ class RulesEngine:
             
             Rule(
                 name="render_lifestyle_guidelines",
-                condition=lambda s: len(s.lifestyle_modifications) > 0,
+                condition=lambda s: len(s.management_plan.lifestyle_modifications) > 0,
                 priority=55,
                 actions=[
                     Action(
@@ -190,7 +189,7 @@ class RulesEngine:
             
             Rule(
                 name="render_reassurance",
-                condition=lambda s: len(s.normal_findings) > 0,
+                condition=lambda s: len(s.clinical_summary.normal_readings) > 0,
                 priority=50,
                 actions=[
                     Action(
@@ -212,7 +211,7 @@ class RulesEngine:
             
             Rule(
                 name="low_risk_lead_with_reassurance",
-                condition=lambda s: s.overall_assessment.risk_level == "Low",
+                condition=lambda s: s.clinical_summary.overall_health_status.risk_assessment == "Low",
                 priority=40,
                 actions=[
                     # Prepend ReassuranceGrid if not already there
@@ -258,7 +257,7 @@ class RulesEngine:
                         "props_generator": lambda s: {"title": "⚠️ Findings Requiring Attention"},
                         "rendering_hints": {},
                     })
-                    for finding in summary.abnormal_findings:
+                    for finding in summary.clinical_summary.abnormal_readings:
                         # Capture finding in closure properly
                         components.append({
                             "type": "MetricAccordion",
@@ -289,14 +288,16 @@ class RulesEngine:
     
     def _has_critical_findings(self, summary: SmartSummary) -> bool:
         """Check if any finding has CRITICAL status"""
-        return any(f.status == "CRITICAL" for f in summary.abnormal_findings)
+        return any(f.risk_level == "CRITICAL" for f in summary.clinical_summary.abnormal_readings)
     
     def _count_findings_by_category(self, summary: SmartSummary, category: str) -> int:
         """Count findings matching a category keyword"""
-        return sum(1 for f in summary.abnormal_findings if category in f.parameter)
+        return sum(1 for f in summary.clinical_summary.abnormal_readings if category in f.parameter_name)
     
     def _count_findings_by_system(self, summary: SmartSummary, system: str) -> int:
         """Count findings by biological system"""
+        # Checks if 'system' field matches or if parameter is in known keywords
+        count = 0
         system_keywords = {
             "Metabolic": ["Glucose", "HbA1c", "Triglycerides", "Cholesterol"],
             "Hematological": ["WBC", "RBC", "Hemoglobin", "Platelets"],
@@ -304,7 +305,13 @@ class RulesEngine:
             "Cardiac": ["Troponin", "BNP"],
         }
         keywords = system_keywords.get(system, [])
-        return sum(1 for f in summary.abnormal_findings if any(k in f.parameter for k in keywords))
+        
+        for f in summary.clinical_summary.abnormal_readings:
+            if f.system == system:
+                count += 1
+            elif any(k in f.parameter_name for k in keywords):
+                count += 1
+        return count
     
     # ========================================================================
     # PROPS GENERATORS - Build component props from SmartSummary
@@ -312,14 +319,14 @@ class RulesEngine:
     
     def _props_critical_alert(self, summary: SmartSummary) -> Dict[str, Any]:
         """Generate props for CriticalAlert component"""
-        critical_findings = [f for f in summary.abnormal_findings if f.status == "CRITICAL"]
+        critical_findings = [f for f in summary.clinical_summary.abnormal_readings if f.risk_level == "CRITICAL"]
         return {
             "findings": [
                 {
-                    "test_name": f.parameter,
+                    "test_name": f.parameter_name,
                     "value": f.value,
                     "warning_text": f.clinical_note,
-                    "status": f.status
+                    "status": f.risk_level
                 }
                 for f in critical_findings
             ],
@@ -330,34 +337,34 @@ class RulesEngine:
         """Generate props for InsightHeader component"""
         return {
             "patient_info": {
-                "name": "Patient",
-                "age": 0,
-                "gender": "N/A",
+                "name": summary.patient_info.name if summary.patient_info and summary.patient_info.name else "Patient",
+                "age": summary.patient_info.age if summary.patient_info else 0,
+                "gender": summary.patient_info.gender if summary.patient_info else "N/A",
             },
-            "risk_level": summary.overall_assessment.risk_level,
-            "overall_concerns": summary.overall_assessment.key_concerns,
-            "date": "Today"
+            "risk_level": summary.clinical_summary.overall_health_status.risk_assessment,
+            "overall_concerns": summary.clinical_summary.overall_health_status.key_concerns,
+            "date": summary.patient_info.report_date if summary.patient_info else "Today"
         }
     
-    def _props_metric_accordion(self, summary: SmartSummary, finding: AbnormalFinding) -> Dict[str, Any]:
+    def _props_metric_accordion(self, summary: SmartSummary, finding: AbnormalReading) -> Dict[str, Any]:
         """Generate props for MetricAccordion component"""
         return {
-            "parameter": finding.parameter,
+            "parameter": finding.parameter_name,
             "value": finding.value,
-            "status": finding.status,
+            "status": finding.risk_level, 
             "causes": finding.causes,
             "effects": finding.effects,
             "clinical_note": finding.clinical_note,
-            "correlation": {}
+            "correlation": {} 
         }
     
     def _props_lipid_group(self, summary: SmartSummary) -> Dict[str, Any]:
         """Generate props for grouped lipid findings"""
-        lipid_findings = [f for f in summary.abnormal_findings if "Lipid" in f.parameter or "Triglycerides" in f.parameter or "Cholesterol" in f.parameter]
+        lipid_findings = [f for f in summary.clinical_summary.abnormal_readings if "Lipid" in f.parameter_name or "Triglycerides" in f.parameter_name or "Cholesterol" in f.parameter_name]
         return {
             "parameter": "Lipid Panel",
             "value": f"{len(lipid_findings)} abnormalities",
-            "status": "HIGH" if any(f.status == "HIGH" for f in lipid_findings) else "LOW",
+            "status": "HIGH" if any(f.risk_level == "HIGH" for f in lipid_findings) else "LOW",
             "causes": list(set(c for f in lipid_findings for c in f.causes)),
             "effects": list(set(e for f in lipid_findings for e in f.effects)),
             "clinical_note": "Multiple lipid abnormalities detected",
@@ -366,11 +373,11 @@ class RulesEngine:
     def _props_metabolic_group(self, summary: SmartSummary) -> Dict[str, Any]:
         """Generate props for grouped metabolic findings"""
         metabolic_keywords = ["Glucose", "HbA1c", "Triglycerides"]
-        metabolic_findings = [f for f in summary.abnormal_findings if any(k in f.parameter for k in metabolic_keywords)]
+        metabolic_findings = [f for f in summary.clinical_summary.abnormal_readings if any(k in f.parameter_name for k in metabolic_keywords)]
         return {
             "parameter": "Metabolic Syndrome Indicators",
             "value": f"{len(metabolic_findings)} abnormalities",
-            "status": "HIGH" if any(f.status in ["CRITICAL", "HIGH"] for f in metabolic_findings) else "LOW",
+            "status": "HIGH" if any(f.risk_level in ["CRITICAL", "HIGH"] for f in metabolic_findings) else "LOW",
             "causes": list(set(c for f in metabolic_findings for c in f.causes)),
             "effects": list(set(e for f in metabolic_findings for e in f.effects)),
             "clinical_note": "Pattern suggests metabolic dysfunction",
@@ -382,11 +389,11 @@ class RulesEngine:
             "events": [
                 {
                     "time": f.timeline,
-                    "test_name": f.test_name,
+                    "test_name": f.recommended_tests,
                     "rationale": f.rationale,
                     "priority": "high" if "Immediate" in f.timeline else "normal"
                 }
-                for f in summary.follow_up_plan
+                for f in summary.management_plan.follow_up_tests
             ]
         }
     
@@ -397,9 +404,9 @@ class RulesEngine:
             "rows": [
                 {
                     "category": item.category,
-                    "recommendation": item.recommendation
+                    "recommendation": item.recommendations
                 }
-                for item in summary.lifestyle_modifications
+                for item in summary.management_plan.lifestyle_modifications
             ],
             "type": "lifestyle",
             "themeColor": "green"
@@ -410,10 +417,10 @@ class RulesEngine:
         return {
             "items": [
                 {
-                    "name": f.parameter,
+                    "name": f.parameter_name,
                     "value": f.value,
                     "interpretation": f.clinical_interpretation
                 }
-                for f in summary.normal_findings
+                for f in summary.clinical_summary.normal_readings
             ]
         }

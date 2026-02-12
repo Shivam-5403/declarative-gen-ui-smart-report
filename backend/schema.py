@@ -44,39 +44,74 @@ class RawLabReport(BaseModel):
     global_remarks: Optional[str] = None
 
 # --- OUTPUT SCHEMA (Smart Summary Structure) ---
-class AbnormalFinding(BaseModel):
-    parameter: str
+
+class PatientInfo(BaseModel):
+    name: Optional[str] = None
+    age: Optional[Union[str, int]] = None
+    gender: Optional[str] = None
+    test_package_name: Optional[str] = None
+    report_date: Optional[str] = None
+
+class AbnormalReading(BaseModel):
+    parameter_name: str
     value: str
-    status: str # CRITICAL/HIGH/LOW
+    units: Optional[str] = None
+    normal_range: Optional[str] = None
+    status: str  # HIGH/LOW/ABNORMAL
+    risk_level: str  # CRITICAL/HIGH/MODERATE/LOW
+    system: Optional[str] = None
     causes: List[str]
     effects: List[str]
     clinical_note: str
 
-class NormalFinding(BaseModel):
-    parameter: str
+class NormalReading(BaseModel):
+    parameter_name: str
     value: str
+    units: Optional[str] = None
+    normal_range: Optional[str] = None
     clinical_interpretation: str
 
-class OverallAssessment(BaseModel):
-    risk_level: str # Low/Moderate/High/Critical
+class OverallHealthStatus(BaseModel):
+    risk_assessment: str  # Low/Moderate/High/Critical
     key_concerns: List[str]
-    immediate_actions: List[str]
+    immediate_action_items: List[str]
 
-class ActionItem(BaseModel):
-    category: str # Diet/Exercise/Lifestyle
-    recommendation: str
+class ClinicalSummary(BaseModel):
+    abnormal_readings: List[AbnormalReading]
+    normal_readings: List[NormalReading]
+    overall_health_status: OverallHealthStatus
 
-class FollowUp(BaseModel):
-    timeline: str # Immediate/1 Week etc.
-    test_name: str
+class FollowUpTest(BaseModel):
+    timeline: str
+    recommended_tests: str
     rationale: str
 
+class LifestyleModification(BaseModel):
+    category: str
+    recommendations: str
+
+class MedicationConsideration(BaseModel):
+    condition: str
+    supplements: Optional[str] = None
+    interactions: Optional[str] = None
+
+class ManagementPlan(BaseModel):
+    follow_up_tests: List[FollowUpTest]
+    lifestyle_modifications: List[LifestyleModification]
+    medication_considerations: Optional[List[MedicationConsideration]] = []
+
+class DetailedAnalysisItem(BaseModel):
+    parameter: str
+    interpretation: str
+    correlation: Optional[str] = None
+    severity: Optional[str] = None
+    monitoring: Optional[str] = None
+
 class SmartSummary(BaseModel):
-    abnormal_findings: List[AbnormalFinding]
-    normal_findings: List[NormalFinding]
-    overall_assessment: OverallAssessment
-    follow_up_plan: List[FollowUp]
-    lifestyle_modifications: List[ActionItem]
+    patient_info: Optional[PatientInfo] = None
+    clinical_summary: ClinicalSummary
+    management_plan: ManagementPlan
+    detailed_analysis: Optional[List[DetailedAnalysisItem]] = []
 
 # --- UI MANIFEST SCHEMA (Component Registry & Dynamic Rendering) ---
 

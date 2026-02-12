@@ -131,6 +131,30 @@ def export_component_schemas():
         print(f"Error exporting schemas: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to export schemas: {str(e)}")
 
+# --- DEBUG ENDPOINTS ---
+
+from schema import SmartSummary
+from ui_mapper import UIManifestGenerator
+
+@app.post("/debug/generate-manifest")
+async def debug_generate_manifest(summary: Dict[str, Any]):
+    """
+    Debug Endpoint: Directly generate UI Manifest from Smart Summary JSON.
+    Bypasses the LLM generation step.
+    """
+    try:
+        # Validate input against schema
+        smart_summary = SmartSummary(**summary)
+        
+        # Generate manifest
+        generator = UIManifestGenerator()
+        manifest = generator.generate_from_summary(smart_summary)
+        
+        return {"ui_manifest": [item.dict() for item in manifest.items]}
+    except Exception as e:
+        print(f"Debug Generation Error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+
 # --- SERVER ENTRY POINT ---
 if __name__ == "__main__":
     # Run with reload enabled for development

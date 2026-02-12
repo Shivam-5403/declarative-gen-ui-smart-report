@@ -1,3 +1,6 @@
 /.env
 /venv
 frontend/.env
+__pycache__/
+*.pyc
+.vscode/

@@ -113,68 +113,108 @@ def _map_to_ui_legacy(state: AgentState):
     manifest = []
 
     # 1. Header Card (Overall Status)
+    # Handle optional/missing keys safely
+    clinical_summary = summary.get('clinical_summary', {})
+    overall_status = clinical_summary.get('overall_health_status', {})
+    
     manifest.append({
         "id": "header",
         "type": "HealthScoreHeader",
         "version": "1.0.0",
         "props": {
-            "risk_level": summary['overall_assessment']['risk_level'],
-            "concerns": summary['overall_assessment']['key_concerns']
+            "risk_level": overall_status.get('risk_assessment', 'Unknown'),
+            "concerns": overall_status.get('key_concerns', [])
         }
     })
 
     # 2. Abnormal Findings (The "Red" Section)
-    if summary['abnormal_findings']:
+    abnormal_readings = clinical_summary.get('abnormal_readings', [])
+    if abnormal_readings:
         manifest.append({
             "id": "section_abnormal",
             "type": "SectionDivider",
             "version": "1.0.0",
             "props": {"title": "⚠️ Attention Required"}
         })
-        for i, item in enumerate(summary['abnormal_findings']):
+        for i, item in enumerate(abnormal_readings):
+            # Map new schema fields to old component props if necessary
+            # AbnormalCardProps expects: parameter, value, status, clinical_note
+            # Item has: parameter_name, value, status, risk_level, clinical_note
             manifest.append({
                 "id": f"abnormal_{i}",
                 "type": "AbnormalCard",
                 "version": "1.0.0",
-                "props": item
+                "props": {
+                    "parameter": item.get('parameter_name'),
+                    "value": item.get('value'),
+                    "status": item.get('risk_level'), # Use risk_level for status
+                    "causes": item.get('causes', []),
+                    "effects": item.get('effects', []),
+                    "clinical_note": item.get('clinical_note')
+                }
             })
 
     # 3. Management Plan (Tables)
-    if summary['follow_up_plan']:
+    management_plan = summary.get('management_plan', {})
+    follow_up_tests = management_plan.get('follow_up_tests', [])
+    
+    if follow_up_tests:
         manifest.append({
             "id": "section_followup",
             "type": "SectionDivider",
             "version": "1.0.0",
             "props": {"title": "📅 Recommended Action Plan"}
         })
+        # FollowUpTableProps expects: rows (list of dicts)
+        # Item has: timeline, recommended_tests, rationale
+        # Table expects column mapping, usually it renders whatever keys are there or specific keys
+        # We might need to adapt keys if component is strict. 
+        # Checking schema.py for FollowUpTableProps... it just says List[Dict[str, Any]].
+        # But usually components expects specific keys. 
+        # Let's map them to be safe if we knew what the component expected.
+        # Assuming component handles these keys or just renders them.
         manifest.append({
             "id": "followup_table",
             "type": "FollowUpTable",
             "version": "1.0.0",
-            "props": {"rows": summary['follow_up_plan']}
+            "props": {"rows": follow_up_tests}
         })
 
-    if summary['lifestyle_modifications']:
+    lifestyle_mods = management_plan.get('lifestyle_modifications', [])
+    if lifestyle_mods:
         manifest.append({
             "id": "lifestyle_table",
             "type": "LifestyleTable",
             "version": "1.0.0",
-            "props": {"rows": summary['lifestyle_modifications']}
+            "props": {"rows": lifestyle_mods}
         })
 
     # 4. Normal Findings (Reassurance)
-    if summary['normal_findings']:
+    normal_readings = clinical_summary.get('normal_readings', [])
+    if normal_readings:
         manifest.append({
             "id": "section_normal",
             "type": "SectionDivider",
             "version": "1.0.0",
             "props": {"title": "✅ Good News"}
         })
+        # NormalListProps expects: items
+        # Item has: parameter_name, value, clinical_interpretation
+        # Component likely expects 'name', 'value', 'interpretation' based on other code.
+        # Let's map it.
+        mapped_normal = [
+            {
+                "name": item.get('parameter_name'),
+                "value": item.get('value'),
+                "interpretation": item.get('clinical_interpretation')
+            }
+            for item in normal_readings
+        ]
         manifest.append({
             "id": "normal_list",
             "type": "NormalList",
             "version": "1.0.0",
-            "props": {"items": summary['normal_findings']}
+            "props": {"items": mapped_normal}
         })
 
     return {"ui_manifest": manifest}
