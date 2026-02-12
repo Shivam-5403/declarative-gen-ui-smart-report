@@ -248,18 +248,21 @@
 // export default App;
 
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FileText, Activity, ChevronRight, RefreshCw, AlertCircle } from 'lucide-react';
+import { FileText, Activity, ChevronRight, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
 
-// Import your components
+// Import registry and validator
+import { initializeComponentRegistry } from './config/componentRegistry';
+import { validateManifest, formatValidationErrors, isSafeToRender } from './utils/manifestValidator';
+
+// Import your components (for fallback if dynamic loading fails)
 import HealthScoreHeader from './components/HealthScoreHeader';
 import AbnormalCard from './components/AbnormalCard';
 import { LifestyleTable, FollowUpTable } from './components/Tables';
 
-// --- COMPONENT REGISTRY ---
-// This maps the backend "type" string to the actual React component
-const componentMap = {
+// Default component map (will be overridden by dynamic registry)
+const DEFAULT_COMPONENT_MAP = {
   HealthScoreHeader: HealthScoreHeader,
   AbnormalCard: AbnormalCard,
   LifestyleTable: LifestyleTable,
@@ -303,21 +306,84 @@ const MOCK_RAW_REPORT = {
   ]
 };
 
+// Backend URL configuration
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+
 export default function App() {
   const [manifest, setManifest] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [registryReady, setRegistryReady] = useState(false);
+  const [componentMap, setComponentMap] = useState(DEFAULT_COMPONENT_MAP);
+  const [schemas, setSchemas] = useState({});
+  const [validationWarnings, setValidationWarnings] = useState([]);
+
+  // Initialize component registry on app start
+  useEffect(() => {
+    const initRegistry = async () => {
+      console.log('[App] Initializing component registry...');
+      try {
+        const registry = await initializeComponentRegistry(BACKEND_URL);
+        setComponentMap(registry.componentMap);
+        setSchemas(registry.schemas);
+        setRegistryReady(true);
+        console.log('[App] Registry ready with', Object.keys(registry.componentMap).length, 'components');
+        
+        if (!registry.isHealthy) {
+          console.warn('[App] Registry initialized with fallbacks only (backend may be unreachable)');
+        }
+      } catch (err) {
+        console.error('[App] Failed to initialize registry:', err);
+        setRegistryReady(true); // Still mark as ready, use defaults
+      }
+    };
+
+    initRegistry();
+  }, []);
 
   const generateSmartReport = async () => {
     setLoading(true);
     setError(null);
+    setValidationWarnings([]);
+    
     try {
-      // Send raw data to your FastAPI backend
-      const response = await axios.post('http://localhost:8000/analyze', MOCK_RAW_REPORT);
-      setManifest(response.data.manifest);
+      // Send raw data to backend
+      const response = await axios.post(`${BACKEND_URL}/analyze`, MOCK_RAW_REPORT);
+      
+      const generatedManifest = response.data.ui_manifest || response.data.manifest;
+      
+      if (!generatedManifest) {
+        throw new Error('Backend returned no manifest');
+      }
+
+      // Validate manifest against schemas
+      const validation = validateManifest(generatedManifest, schemas);
+      
+      if (!validation.isValid && !isSafeToRender(validation)) {
+        setError(formatValidationErrors(validation));
+        console.error('[App] Manifest validation failed:', validation);
+        return;
+      }
+
+      // Store warnings if any
+      if (validation.allWarnings.length > 0) {
+        setValidationWarnings(validation.allWarnings);
+        console.warn('[App] Manifest validation warnings:', validation.allWarnings);
+      }
+
+      setManifest(generatedManifest);
+      console.log('[App] Report generated successfully with', generatedManifest.items?.length || 0, 'components');
     } catch (err) {
-      console.error("Analysis Failed:", err);
-      setError("Failed to generate report. Ensure backend is running on port 8000.");
+      console.error('[App] Analysis failed:', err);
+      let errorMsg = 'Failed to generate report.';
+      
+      if (err.response?.status === 500) {
+        errorMsg = 'Backend error: Check backend logs for details.';
+      } else if (err.message?.includes('Network')) {
+        errorMsg = 'Cannot reach backend. Ensure backend is running on ' + BACKEND_URL;
+      }
+      
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -336,29 +402,59 @@ export default function App() {
             <div>
               <h1 className="text-3xl font-black tracking-tight text-gray-900">Smart Report</h1>
               <p className="text-gray-500 font-medium">Generative Clinical Synthesis</p>
+              <p className="text-xs text-gray-400 mt-1">
+                {registryReady ? (
+                  <>✓ Registry ready: {Object.keys(componentMap).length} components</>
+                ) : (
+                  <>Loading component registry...</>
+                )}
+              </p>
             </div>
           </div>
 
           <button 
             onClick={generateSmartReport}
-            disabled={loading}
+            disabled={loading || !registryReady}
             className="group relative overflow-hidden bg-gray-900 hover:bg-black text-white px-8 py-3 rounded-full font-bold transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 disabled:opacity-70 disabled:hover:translate-y-0"
           >
             <div className="flex items-center gap-2 relative z-10">
               {loading ? (
-                <><RefreshCw className="animate-spin" size={18} /> Analyzing Clinical Data...</>
+                <><RefreshCw className="animate-spin" size={18} /> Analyzing...</>
               ) : (
-                <>Generate Analysis <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" /></>
+                <>Generate <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" /></>
               )}
             </div>
           </button>
         </header>
 
+        {/* REGISTRY STATUS */}
+        {!registryReady && (
+          <div className="bg-blue-50 border border-blue-200 text-blue-700 p-4 rounded-xl mb-8 flex items-center gap-3 animate-pulse">
+            <Activity size={20} className="animate-spin" />
+            <span>Initializing component registry...</span>
+          </div>
+        )}
+
         {/* ERROR STATE */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl mb-8 flex items-center gap-3">
             <AlertCircle size={20} />
-            {error}
+            <div className="flex-1 whitespace-pre-wrap">{error}</div>
+          </div>
+        )}
+
+        {/* VALIDATION WARNINGS */}
+        {validationWarnings.length > 0 && (
+          <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-xl mb-8">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle size={20} />
+              <span className="font-semibold">Validation Warnings ({validationWarnings.length})</span>
+            </div>
+            <ul className="list-disc list-inside text-sm space-y-1">
+              {validationWarnings.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
+            </ul>
           </div>
         )}
 
@@ -367,22 +463,46 @@ export default function App() {
           <div className="text-center py-20 border-2 border-dashed border-gray-200 rounded-3xl bg-white">
             <FileText className="mx-auto text-gray-300 mb-4" size={64} />
             <h3 className="text-xl font-bold text-gray-400">Ready to Analyze</h3>
-            <p className="text-gray-400">Upload patient data to generate a smart insight report.</p>
+            <p className="text-gray-400">Click "Generate" to analyze patient data.</p>
           </div>
         )}
 
         {/* DYNAMIC REPORT RENDERING */}
         {manifest && (
           <div className="animate-fade-in space-y-2">
-            {manifest.map((item, index) => {
-              const Component = componentMap[item.type];
-              if (!Component) {
-                console.warn(`Unknown component type: ${item.type}`);
-                return null;
-              }
-              // Pass all "props" from JSON directly to the React component
-              return <Component key={index} {...item.props} />;
-            })}
+            {Array.isArray(manifest.items) ? (
+              manifest.items.map((item, index) => {
+                const Component = componentMap[item.type];
+                
+                if (!Component) {
+                  console.warn(`[App] Unknown component type: ${item.type}`);
+                  return (
+                    <div key={index} className="bg-red-50 border border-red-200 p-4 rounded-xl">
+                      <p className="text-red-700 font-bold">Unknown Component: {item.type}</p>
+                      <p className="text-red-600 text-sm">This component type is not registered.</p>
+                    </div>
+                  );
+                }
+
+                try {
+                  // Pass all "props" from manifest directly to the React component
+                  return <Component key={item.id || index} {...item.props} />;
+                } catch (renderErr) {
+                  console.error(`[App] Error rendering component ${item.type}:`, renderErr);
+                  return (
+                    <div key={index} className="bg-orange-50 border border-orange-200 p-4 rounded-xl">
+                      <p className="text-orange-700 font-bold">Render Error: {item.type}</p>
+                      <p className="text-orange-600 text-sm">{renderErr.message}</p>
+                    </div>
+                  );
+                }
+              })
+            ) : (
+              <div className="bg-red-50 border border-red-200 p-4 rounded-xl">
+                <p className="text-red-700 font-bold">Invalid Manifest Structure</p>
+                <p className="text-red-600 text-sm">Manifest.items is not an array</p>
+              </div>
+            )}
           </div>
         )}
 

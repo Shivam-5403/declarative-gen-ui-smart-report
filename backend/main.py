@@ -26,9 +26,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 
-# Import your agent workflow
-# Ensure agents.py is in the same folder or properly referenced
-from agents import smart_report_app 
+# Import your agent workflow and component registry
+from agents import smart_report_app
+from components import export_as_json_schema 
 
 # --- APP CONFIGURATION ---
 app = FastAPI(
@@ -91,11 +91,45 @@ async def analyze_report(report: RawLabReport):
         if not manifest:
             raise HTTPException(status_code=500, detail="Agent returned empty manifest")
             
-        return {"manifest": manifest}
+        return {"ui_manifest": manifest}
 
     except Exception as e:
         print(f"CRITICAL ERROR: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/schema-export")
+def export_component_schemas():
+    """
+    Schema Export Endpoint for Frontend Runtime Discovery
+    
+    Returns all component schemas as JSON, allowing the frontend to:
+    1. Auto-discover available components
+    2. Validate manifests at runtime  
+    3. Generate TypeScript types (optional)
+    
+    Response format:
+    {
+        "ComponentName": {
+            "componentName": "ComponentName",
+            "version": "1.0.0",
+            "displayName": "...",
+            "category": "...",
+            "visualRole": "...",
+            "description": "...",
+            "propsSchema": {...},  // JSON Schema
+            "renderingHints": {...},
+            "deprecations": [...],
+            "breakingChanges": {...}
+        },
+        ...
+    }
+    """
+    try:
+        schemas = export_as_json_schema()
+        return schemas
+    except Exception as e:
+        print(f"Error exporting schemas: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to export schemas: {str(e)}")
 
 # --- SERVER ENTRY POINT ---
 if __name__ == "__main__":

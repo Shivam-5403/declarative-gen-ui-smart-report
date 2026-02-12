@@ -1,19 +1,27 @@
 """
-UI MAPPER - Dynamic UI Manifest Generation Engine
+UI MANIFEST GENERATOR - Coordinates the generation of dynamic UI manifests from SmartSummary data.
 
-This module replaces the hardcoded UI mapping logic with a rules-based,
-declarative system that generates UI manifests from SmartSummary objects.
+This module replaces the hardcoded UI mapper logic with a declarative, rules-based approach:
+1. Takes SmartSummary (output from Summarizer agent)
+2. Applies declarative rules from ui_rules.py
+3. Generates UIManifest (array of {type, props} components)
+4. Validates manifest against component schemas
+5. Returns to frontend for rendering
 
-The mapper works in three stages:
-1. Analyze SmartSummary to understand severity, grouping, and tone
-2. Apply declarative rules to determine component sequence and props
-3. Validate and return UIManifest with error tracking
+Key design:
+- Decouples data extraction (SmartSummary) from display logic (manifest generation)
+- Enables adding new components without code changes (only rule config)
+- Provides detailed error tracking for debugging
+- Supports versioning and backward compatibility
 """
 
 import uuid
 from datetime import datetime
 from typing import Optional, List, Dict, Any
+from pydantic import ValidationError
+
 from schema import SmartSummary, UIManifest, UIManifestItem, ValidationResult
+from schema import ValidationError as UIValidationError
 from components import COMPONENT_REGISTRY
 from ui_rules import RulesEngine
 
