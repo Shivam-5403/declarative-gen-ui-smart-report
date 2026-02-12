@@ -256,37 +256,57 @@ import { FileText, Activity, ChevronRight, RefreshCw, AlertCircle, CheckCircle }
 import { initializeComponentRegistry } from './config/componentRegistry';
 import { validateManifest, formatValidationErrors, isSafeToRender } from './utils/manifestValidator';
 
-// Import your components (for fallback if dynamic loading fails)
-import HealthScoreHeader from './components/HealthScoreHeader';
-import AbnormalCard from './components/AbnormalCard';
-import { LifestyleTable, FollowUpTable } from './components/Tables';
+// Error Boundary Component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
 
-// Default component map (will be overridden by dynamic registry)
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('[ErrorBoundary] Caught error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ minHeight: '100vh', backgroundColor: '#fee2e2', padding: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ backgroundColor: '#fecaca', border: '3px solid #dc2626', borderRadius: '0.75rem', padding: '2rem', maxWidth: '500px' }}>
+            <h1 style={{ color: '#991b1b', margin: '0 0 1rem 0' }}>💥 Rendering Error</h1>
+            <p style={{ color: '#7f1d1d', fontFamily: 'monospace', whiteSpace: 'pre-wrap', margin: 0 }}>{String(this.state.error)}</p>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// Default component map - only simple inline fallback components
+// Complex components like HealthScoreHeader, AbnormalCard are loaded dynamically from registry
 const DEFAULT_COMPONENT_MAP = {
-  HealthScoreHeader: HealthScoreHeader,
-  AbnormalCard: AbnormalCard,
-  LifestyleTable: LifestyleTable,
-  FollowUpTable: FollowUpTable,
-  
   // Simple inline components for structural elements
   SectionDivider: ({ title }) => (
-    <div className="mt-10 mb-6 border-b border-gray-200 pb-2">
-      <h3 className="text-xl font-black text-gray-800 tracking-tight uppercase flex items-center gap-2">
-        {title.includes("Attention") ? <AlertCircle size={20} className="text-red-500"/> : null}
+    <div style={{ marginTop: '2.5rem', marginBottom: '1.5rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '0.5rem' }}>
+      <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#111827', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+        {title.includes("Attention") ? <AlertCircle size={20} style={{ color: '#ef4444' }} /> : null}
         {title}
       </h3>
     </div>
   ),
   
   NormalList: ({ items }) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
       {items.map((item, i) => (
-        <div key={i} className="bg-green-50/50 p-4 rounded-xl border border-green-100 hover:shadow-sm transition-all">
-          <div className="flex justify-between items-start">
-            <div className="font-bold text-green-900">{item.parameter}</div>
-            <div className="text-green-700 font-mono font-semibold">{item.value}</div>
-          </div>
-          <div className="text-xs text-green-600 mt-1 font-medium">{item.clinical_interpretation}</div>
+        <div key={i} style={{ backgroundColor: '#dcfce7', padding: '1rem', borderRadius: '0.75rem', border: '1px solid #86efac' }}>
+          <div style={{ fontWeight: 'bold', color: '#166534' }}>{item.parameter}</div>
+          <div style={{ color: '#22c55e', fontFamily: 'monospace', fontWeight: 600 }}>{item.value}</div>
+          <div style={{ fontSize: '0.75rem', color: '#4ade80', marginTop: '0.25rem' }}>{item.clinical_interpretation}</div>
         </div>
       ))}
     </div>
@@ -309,11 +329,19 @@ const MOCK_RAW_REPORT = {
 // Backend URL configuration
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
 
-export default function App() {
+export default function AppWrapper() {
+  return (
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
+  );
+}
+
+function App() {
   const [manifest, setManifest] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [registryReady, setRegistryReady] = useState(false);
+  const [registryReady, setRegistryReady] = useState(true);
   const [componentMap, setComponentMap] = useState(DEFAULT_COMPONENT_MAP);
   const [schemas, setSchemas] = useState({});
   const [validationWarnings, setValidationWarnings] = useState([]);
@@ -324,9 +352,9 @@ export default function App() {
       console.log('[App] Initializing component registry...');
       try {
         const registry = await initializeComponentRegistry(BACKEND_URL);
-        setComponentMap(registry.componentMap);
+        console.log('[App] Registry response:', registry);
+        setComponentMap({...DEFAULT_COMPONENT_MAP, ...registry.componentMap});
         setSchemas(registry.schemas);
-        setRegistryReady(true);
         console.log('[App] Registry ready with', Object.keys(registry.componentMap).length, 'components');
         
         if (!registry.isHealthy) {
@@ -334,7 +362,8 @@ export default function App() {
         }
       } catch (err) {
         console.error('[App] Failed to initialize registry:', err);
-        setRegistryReady(true); // Still mark as ready, use defaults
+        console.log('[App] Using default component map as fallback');
+        setComponentMap(DEFAULT_COMPONENT_MAP);
       }
     };
 
@@ -390,23 +419,25 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/80 p-6 md:p-12 font-sans text-gray-900">
-      <div className="max-w-4xl mx-auto">
+    <div style={{minHeight: '100vh', backgroundColor: '#f3f4f6', padding: '1.5rem', fontFamily: 'system-ui, sans-serif', color: '#111827'}}>
+      <div style={{maxWidth: '56rem', margin: '0 auto'}}>
+        <h1 style={{color: '#111827', fontSize: '2rem', textAlign: 'center'}}>🎯 Smart Report Generator</h1>
+        <p style={{textAlign: 'center', color: '#6b7280'}}>Frontend is working! ✓</p>
         
         {/* HEADER SECTION */}
-        <header className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6">
-          <div className="flex items-center gap-4">
-            <div className="bg-blue-600 p-3 rounded-2xl shadow-lg shadow-blue-200">
-              <Activity className="text-white" size={28} />
+        <header style={{display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '3rem', alignItems: 'center', justifyContent: 'space-between'}}>
+          <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
+            <div style={{backgroundColor: '#2563eb', padding: '0.75rem', borderRadius: '1rem', boxShadow: '0 20px 25px -5px rgba(37, 99, 235, 0.2)'}}>
+              <Activity color="white" size={28} />
             </div>
             <div>
-              <h1 className="text-3xl font-black tracking-tight text-gray-900">Smart Report</h1>
-              <p className="text-gray-500 font-medium">Generative Clinical Synthesis</p>
-              <p className="text-xs text-gray-400 mt-1">
+              <h1 style={{fontSize: '1.875rem', fontWeight: 900, letterSpacing: '-0.025em', margin: '0', color: '#111827'}}>Smart Report</h1>
+              <p style={{color: '#6b7280', fontWeight: 500, margin: '0', fontSize: '0.875rem'}}>Generative Clinical Synthesis</p>
+              <p style={{fontSize: '0.75rem', color: '#9ca3af', margin: '0.25rem 0 0 0'}}>
                 {registryReady ? (
                   <>✓ Registry ready: {Object.keys(componentMap).length} components</>
                 ) : (
-                  <>Loading component registry...</>
+                  <>Initializing...</>
                 )}
               </p>
             </div>
@@ -414,43 +445,56 @@ export default function App() {
 
           <button 
             onClick={generateSmartReport}
-            disabled={loading || !registryReady}
-            className="group relative overflow-hidden bg-gray-900 hover:bg-black text-white px-8 py-3 rounded-full font-bold transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 disabled:opacity-70 disabled:hover:translate-y-0"
+            disabled={loading}
+            style={{
+              backgroundColor: '#111827',
+              color: 'white',
+              padding: '0.75rem 2rem',
+              borderRadius: '9999px',
+              fontWeight: 700,
+              border: 'none',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.7 : 1,
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+            onMouseEnter={(e) => !loading && (e.target.style.backgroundColor = '#000')}
+            onMouseLeave={(e) => !loading && (e.target.style.backgroundColor = '#111827')}
           >
-            <div className="flex items-center gap-2 relative z-10">
-              {loading ? (
-                <><RefreshCw className="animate-spin" size={18} /> Analyzing...</>
-              ) : (
-                <>Generate <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" /></>
-              )}
-            </div>
+            {loading ? (
+              <><RefreshCw size={18} style={{animation: 'spin 1s linear infinite'}} /> Analyzing...</>
+            ) : (
+              <>Generate <ChevronRight size={18} /></>
+            )}
           </button>
         </header>
 
-        {/* REGISTRY STATUS */}
+        {/* STATUS */}
         {!registryReady && (
-          <div className="bg-blue-50 border border-blue-200 text-blue-700 p-4 rounded-xl mb-8 flex items-center gap-3 animate-pulse">
-            <Activity size={20} className="animate-spin" />
+          <div style={{backgroundColor: '#dbeafe', border: '1px solid #93c5fd', color: '#1e40af', padding: '1rem', borderRadius: '0.75rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
+            <Activity size={20} style={{animation: 'spin 2s linear infinite'}} />
             <span>Initializing component registry...</span>
           </div>
         )}
 
         {/* ERROR STATE */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl mb-8 flex items-center gap-3">
+          <div style={{backgroundColor: '#fee2e2', border: '1px solid #fecaca', color: '#991b1b', padding: '1rem', borderRadius: '0.75rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
             <AlertCircle size={20} />
-            <div className="flex-1 whitespace-pre-wrap">{error}</div>
+            <div style={{whiteSpace: 'pre-wrap'}}>{error}</div>
           </div>
         )}
 
         {/* VALIDATION WARNINGS */}
         {validationWarnings.length > 0 && (
-          <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-xl mb-8">
-            <div className="flex items-center gap-2 mb-2">
+          <div style={{backgroundColor: '#fef3c7', border: '1px solid #fcd34d', color: '#92400e', padding: '1rem', borderRadius: '0.75rem', marginBottom: '2rem'}}>
+            <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontWeight: 600}}>
               <AlertCircle size={20} />
-              <span className="font-semibold">Validation Warnings ({validationWarnings.length})</span>
+              <span>Validation Warnings ({validationWarnings.length})</span>
             </div>
-            <ul className="list-disc list-inside text-sm space-y-1">
+            <ul style={{margin: 0, paddingLeft: '1.5rem', fontSize: '0.875rem', lineHeight: '1.5'}}>
               {validationWarnings.map((w, i) => (
                 <li key={i}>{w}</li>
               ))}
@@ -460,51 +504,61 @@ export default function App() {
 
         {/* EMPTY STATE */}
         {!manifest && !loading && !error && (
-          <div className="text-center py-20 border-2 border-dashed border-gray-200 rounded-3xl bg-white">
-            <FileText className="mx-auto text-gray-300 mb-4" size={64} />
-            <h3 className="text-xl font-bold text-gray-400">Ready to Analyze</h3>
-            <p className="text-gray-400">Click "Generate" to analyze patient data.</p>
+          <div style={{textAlign: 'center', paddingY: '5rem', border: '2px dashed #e5e7eb', borderRadius: '1.5rem', backgroundColor: 'white', padding: '5rem 1rem'}}>
+            <FileText style={{margin: '0 auto 1rem', color: '#d1d5db'}} size={64} />
+            <h3 style={{fontSize: '1.25rem', fontWeight: 700, color: '#9ca3af', margin: '0'}}>Ready to Analyze</h3>
+            <p style={{color: '#9ca3af', margin: '0.5rem 0 0 0'}}>Click "Generate" to analyze patient data.</p>
           </div>
         )}
 
         {/* DYNAMIC REPORT RENDERING */}
         {manifest && (
-          <div className="animate-fade-in space-y-2">
-            {Array.isArray(manifest.items) ? (
-              manifest.items.map((item, index) => {
+          <div style={{animation: 'fadeIn 0.3s ease-in', display: 'flex', flexDirection: 'column', gap: '0.5rem'}}>
+            {Array.isArray(manifest) ? (
+              manifest.map((item, index) => {
                 const Component = componentMap[item.type];
                 
                 if (!Component) {
                   console.warn(`[App] Unknown component type: ${item.type}`);
                   return (
-                    <div key={index} className="bg-red-50 border border-red-200 p-4 rounded-xl">
-                      <p className="text-red-700 font-bold">Unknown Component: {item.type}</p>
-                      <p className="text-red-600 text-sm">This component type is not registered.</p>
+                    <div key={index} style={{backgroundColor: '#fee2e2', border: '1px solid #fecaca', padding: '1rem', borderRadius: '0.75rem'}}>
+                      <p style={{color: '#991b1b', fontWeight: 700, margin: '0'}}>Unknown Component: {item.type}</p>
+                      <p style={{color: '#dc2626', fontSize: '0.875rem', margin: '0'}}>This component type is not registered.</p>
                     </div>
                   );
                 }
 
                 try {
-                  // Pass all "props" from manifest directly to the React component
                   return <Component key={item.id || index} {...item.props} />;
                 } catch (renderErr) {
-                  console.error(`[App] Error rendering component ${item.type}:`, renderErr);
+                  console.error(`[App] Error rendering ${item.type}:`, renderErr);
                   return (
-                    <div key={index} className="bg-orange-50 border border-orange-200 p-4 rounded-xl">
-                      <p className="text-orange-700 font-bold">Render Error: {item.type}</p>
-                      <p className="text-orange-600 text-sm">{renderErr.message}</p>
+                    <div key={index} style={{backgroundColor: '#fed7aa', border: '1px solid #fdba74', padding: '1rem', borderRadius: '0.75rem'}}>
+                      <p style={{color: '#92400e', fontWeight: 700, margin: '0'}}>Render Error: {item.type}</p>
+                      <p style={{color: '#b45309', fontSize: '0.875rem', margin: '0'}}>{renderErr.message}</p>
                     </div>
                   );
                 }
               })
             ) : (
-              <div className="bg-red-50 border border-red-200 p-4 rounded-xl">
-                <p className="text-red-700 font-bold">Invalid Manifest Structure</p>
-                <p className="text-red-600 text-sm">Manifest.items is not an array</p>
+              <div style={{backgroundColor: '#fee2e2', border: '1px solid #fecaca', padding: '1rem', borderRadius: '0.75rem'}}>
+                <p style={{color: '#991b1b', fontWeight: 700, margin: '0'}}>Invalid Manifest</p>
+                <p style={{color: '#dc2626', fontSize: '0.875rem', margin: '0'}}>Manifest items is not an array</p>
               </div>
             )}
           </div>
         )}
+
+        <style>{`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+        `}</style>
 
       </div>
     </div>

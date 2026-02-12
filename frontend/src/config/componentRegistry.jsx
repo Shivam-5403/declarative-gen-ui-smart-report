@@ -20,6 +20,8 @@
  *   const schemas = registry.schemas;
  */
 
+import React from 'react';
+
 /**
  * Dynamically import a React component
  * Returns lazy-loaded component for performance
@@ -127,12 +129,12 @@ export async function buildComponentMap(schemas) {
     </div>
   );
 
-  componentMap['FollowUpTable'] = (props) => {
+  componentMap['FollowUpTable'] = async (props) => {
     const Tables = await importComponent('Tables');
     return Tables ? <Tables {...props} /> : null;
   };
 
-  componentMap['LifestyleTable'] = (props) => {
+  componentMap['LifestyleTable'] = async (props) => {
     const Tables = await importComponent('Tables');
     return Tables ? <Tables {...props} /> : null;
   };
