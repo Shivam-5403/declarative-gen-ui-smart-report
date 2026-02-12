@@ -148,7 +148,7 @@
 //   data.current_report.forEach(test => {
 //     if (!test.is_panel) {
 //       manifest.push({ type: 'MetricCard', props: { data: test } });
-      
+
 //       // Agentic Reasoning: If Glucose is High, Trigger specific insights
 //       if (test.test_name.includes("Glucose") && test.interpretation === "High") {
 //         insights.push(`Detected Hyperglycemia (${test.value} ${test.unit}). This represents a ${Math.round(((test.value - 100)/100)*100)}% increase over standard baseline.`);
@@ -203,7 +203,7 @@
 //             <h1 className="text-4xl font-black text-gray-900 tracking-tight">Patient Report Synthesis</h1>
 //             <p className="text-gray-500 mt-2">Target: {PATIENT_DATA.name} | ID: {PATIENT_DATA.patient_id}</p>
 //           </div>
-          
+
 //           <button 
 //             onClick={handleGenerate}
 //             disabled={isGenerating}
@@ -299,7 +299,7 @@ const DEFAULT_COMPONENT_MAP = {
       </h3>
     </div>
   ),
-  
+
   NormalList: ({ items }) => (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
       {items.map((item, i) => (
@@ -327,7 +327,7 @@ const MOCK_RAW_REPORT = {
 };
 
 // Backend URL configuration
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
 export default function AppWrapper() {
   return (
@@ -353,10 +353,10 @@ function App() {
       try {
         const registry = await initializeComponentRegistry(BACKEND_URL);
         console.log('[App] Registry response:', registry);
-        setComponentMap({...DEFAULT_COMPONENT_MAP, ...registry.componentMap});
+        setComponentMap({ ...DEFAULT_COMPONENT_MAP, ...registry.componentMap });
         setSchemas(registry.schemas);
         console.log('[App] Registry ready with', Object.keys(registry.componentMap).length, 'components');
-        
+
         if (!registry.isHealthy) {
           console.warn('[App] Registry initialized with fallbacks only (backend may be unreachable)');
         }
@@ -374,20 +374,20 @@ function App() {
     setLoading(true);
     setError(null);
     setValidationWarnings([]);
-    
+
     try {
       // Send raw data to backend
       const response = await axios.post(`${BACKEND_URL}/analyze`, MOCK_RAW_REPORT);
-      
+
       const generatedManifest = response.data.ui_manifest || response.data.manifest;
-      
+
       if (!generatedManifest) {
         throw new Error('Backend returned no manifest');
       }
 
       // Validate manifest against schemas
-      const validation = validateManifest(generatedManifest, schemas);
-      
+      const validation = validateManifest({ items: generatedManifest }, schemas);
+
       if (!validation.isValid && !isSafeToRender(validation)) {
         setError(formatValidationErrors(validation));
         console.error('[App] Manifest validation failed:', validation);
@@ -405,13 +405,13 @@ function App() {
     } catch (err) {
       console.error('[App] Analysis failed:', err);
       let errorMsg = 'Failed to generate report.';
-      
+
       if (err.response?.status === 500) {
         errorMsg = 'Backend error: Check backend logs for details.';
       } else if (err.message?.includes('Network')) {
         errorMsg = 'Cannot reach backend. Ensure backend is running on ' + BACKEND_URL;
       }
-      
+
       setError(errorMsg);
     } finally {
       setLoading(false);
@@ -419,21 +419,21 @@ function App() {
   };
 
   return (
-    <div style={{minHeight: '100vh', backgroundColor: '#f3f4f6', padding: '1.5rem', fontFamily: 'system-ui, sans-serif', color: '#111827'}}>
-      <div style={{maxWidth: '56rem', margin: '0 auto'}}>
-        <h1 style={{color: '#111827', fontSize: '2rem', textAlign: 'center'}}>🎯 Smart Report Generator</h1>
-        <p style={{textAlign: 'center', color: '#6b7280'}}>Frontend is working! ✓</p>
-        
+    <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6', padding: '1.5rem', fontFamily: 'system-ui, sans-serif', color: '#111827' }}>
+      <div style={{ maxWidth: '56rem', margin: '0 auto' }}>
+        <h1 style={{ color: '#111827', fontSize: '2rem', textAlign: 'center' }}>🎯 Smart Report Generator</h1>
+        <p style={{ textAlign: 'center', color: '#6b7280' }}>Frontend is working! ✓</p>
+
         {/* HEADER SECTION */}
-        <header style={{display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '3rem', alignItems: 'center', justifyContent: 'space-between'}}>
-          <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
-            <div style={{backgroundColor: '#2563eb', padding: '0.75rem', borderRadius: '1rem', boxShadow: '0 20px 25px -5px rgba(37, 99, 235, 0.2)'}}>
+        <header style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '3rem', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ backgroundColor: '#2563eb', padding: '0.75rem', borderRadius: '1rem', boxShadow: '0 20px 25px -5px rgba(37, 99, 235, 0.2)' }}>
               <Activity color="white" size={28} />
             </div>
             <div>
-              <h1 style={{fontSize: '1.875rem', fontWeight: 900, letterSpacing: '-0.025em', margin: '0', color: '#111827'}}>Smart Report</h1>
-              <p style={{color: '#6b7280', fontWeight: 500, margin: '0', fontSize: '0.875rem'}}>Generative Clinical Synthesis</p>
-              <p style={{fontSize: '0.75rem', color: '#9ca3af', margin: '0.25rem 0 0 0'}}>
+              <h1 style={{ fontSize: '1.875rem', fontWeight: 900, letterSpacing: '-0.025em', margin: '0', color: '#111827' }}>Smart Report</h1>
+              <p style={{ color: '#6b7280', fontWeight: 500, margin: '0', fontSize: '0.875rem' }}>Generative Clinical Synthesis</p>
+              <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: '0.25rem 0 0 0' }}>
                 {registryReady ? (
                   <>✓ Registry ready: {Object.keys(componentMap).length} components</>
                 ) : (
@@ -443,7 +443,7 @@ function App() {
             </div>
           </div>
 
-          <button 
+          <button
             onClick={generateSmartReport}
             disabled={loading}
             style={{
@@ -464,7 +464,7 @@ function App() {
             onMouseLeave={(e) => !loading && (e.target.style.backgroundColor = '#111827')}
           >
             {loading ? (
-              <><RefreshCw size={18} style={{animation: 'spin 1s linear infinite'}} /> Analyzing...</>
+              <><RefreshCw size={18} style={{ animation: 'spin 1s linear infinite' }} /> Analyzing...</>
             ) : (
               <>Generate <ChevronRight size={18} /></>
             )}
@@ -473,28 +473,28 @@ function App() {
 
         {/* STATUS */}
         {!registryReady && (
-          <div style={{backgroundColor: '#dbeafe', border: '1px solid #93c5fd', color: '#1e40af', padding: '1rem', borderRadius: '0.75rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
-            <Activity size={20} style={{animation: 'spin 2s linear infinite'}} />
+          <div style={{ backgroundColor: '#dbeafe', border: '1px solid #93c5fd', color: '#1e40af', padding: '1rem', borderRadius: '0.75rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <Activity size={20} style={{ animation: 'spin 2s linear infinite' }} />
             <span>Initializing component registry...</span>
           </div>
         )}
 
         {/* ERROR STATE */}
         {error && (
-          <div style={{backgroundColor: '#fee2e2', border: '1px solid #fecaca', color: '#991b1b', padding: '1rem', borderRadius: '0.75rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
+          <div style={{ backgroundColor: '#fee2e2', border: '1px solid #fecaca', color: '#991b1b', padding: '1rem', borderRadius: '0.75rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <AlertCircle size={20} />
-            <div style={{whiteSpace: 'pre-wrap'}}>{error}</div>
+            <div style={{ whiteSpace: 'pre-wrap' }}>{error}</div>
           </div>
         )}
 
         {/* VALIDATION WARNINGS */}
         {validationWarnings.length > 0 && (
-          <div style={{backgroundColor: '#fef3c7', border: '1px solid #fcd34d', color: '#92400e', padding: '1rem', borderRadius: '0.75rem', marginBottom: '2rem'}}>
-            <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontWeight: 600}}>
+          <div style={{ backgroundColor: '#fef3c7', border: '1px solid #fcd34d', color: '#92400e', padding: '1rem', borderRadius: '0.75rem', marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontWeight: 600 }}>
               <AlertCircle size={20} />
               <span>Validation Warnings ({validationWarnings.length})</span>
             </div>
-            <ul style={{margin: 0, paddingLeft: '1.5rem', fontSize: '0.875rem', lineHeight: '1.5'}}>
+            <ul style={{ margin: 0, paddingLeft: '1.5rem', fontSize: '0.875rem', lineHeight: '1.5' }}>
               {validationWarnings.map((w, i) => (
                 <li key={i}>{w}</li>
               ))}
@@ -504,26 +504,26 @@ function App() {
 
         {/* EMPTY STATE */}
         {!manifest && !loading && !error && (
-          <div style={{textAlign: 'center', paddingY: '5rem', border: '2px dashed #e5e7eb', borderRadius: '1.5rem', backgroundColor: 'white', padding: '5rem 1rem'}}>
-            <FileText style={{margin: '0 auto 1rem', color: '#d1d5db'}} size={64} />
-            <h3 style={{fontSize: '1.25rem', fontWeight: 700, color: '#9ca3af', margin: '0'}}>Ready to Analyze</h3>
-            <p style={{color: '#9ca3af', margin: '0.5rem 0 0 0'}}>Click "Generate" to analyze patient data.</p>
+          <div style={{ textAlign: 'center', paddingY: '5rem', border: '2px dashed #e5e7eb', borderRadius: '1.5rem', backgroundColor: 'white', padding: '5rem 1rem' }}>
+            <FileText style={{ margin: '0 auto 1rem', color: '#d1d5db' }} size={64} />
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#9ca3af', margin: '0' }}>Ready to Analyze</h3>
+            <p style={{ color: '#9ca3af', margin: '0.5rem 0 0 0' }}>Click "Generate" to analyze patient data.</p>
           </div>
         )}
 
         {/* DYNAMIC REPORT RENDERING */}
         {manifest && (
-          <div style={{animation: 'fadeIn 0.3s ease-in', display: 'flex', flexDirection: 'column', gap: '0.5rem'}}>
+          <div style={{ animation: 'fadeIn 0.3s ease-in', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {Array.isArray(manifest) ? (
               manifest.map((item, index) => {
                 const Component = componentMap[item.type];
-                
+
                 if (!Component) {
                   console.warn(`[App] Unknown component type: ${item.type}`);
                   return (
-                    <div key={index} style={{backgroundColor: '#fee2e2', border: '1px solid #fecaca', padding: '1rem', borderRadius: '0.75rem'}}>
-                      <p style={{color: '#991b1b', fontWeight: 700, margin: '0'}}>Unknown Component: {item.type}</p>
-                      <p style={{color: '#dc2626', fontSize: '0.875rem', margin: '0'}}>This component type is not registered.</p>
+                    <div key={index} style={{ backgroundColor: '#fee2e2', border: '1px solid #fecaca', padding: '1rem', borderRadius: '0.75rem' }}>
+                      <p style={{ color: '#991b1b', fontWeight: 700, margin: '0' }}>Unknown Component: {item.type}</p>
+                      <p style={{ color: '#dc2626', fontSize: '0.875rem', margin: '0' }}>This component type is not registered.</p>
                     </div>
                   );
                 }
@@ -533,17 +533,17 @@ function App() {
                 } catch (renderErr) {
                   console.error(`[App] Error rendering ${item.type}:`, renderErr);
                   return (
-                    <div key={index} style={{backgroundColor: '#fed7aa', border: '1px solid #fdba74', padding: '1rem', borderRadius: '0.75rem'}}>
-                      <p style={{color: '#92400e', fontWeight: 700, margin: '0'}}>Render Error: {item.type}</p>
-                      <p style={{color: '#b45309', fontSize: '0.875rem', margin: '0'}}>{renderErr.message}</p>
+                    <div key={index} style={{ backgroundColor: '#fed7aa', border: '1px solid #fdba74', padding: '1rem', borderRadius: '0.75rem' }}>
+                      <p style={{ color: '#92400e', fontWeight: 700, margin: '0' }}>Render Error: {item.type}</p>
+                      <p style={{ color: '#b45309', fontSize: '0.875rem', margin: '0' }}>{renderErr.message}</p>
                     </div>
                   );
                 }
               })
             ) : (
-              <div style={{backgroundColor: '#fee2e2', border: '1px solid #fecaca', padding: '1rem', borderRadius: '0.75rem'}}>
-                <p style={{color: '#991b1b', fontWeight: 700, margin: '0'}}>Invalid Manifest</p>
-                <p style={{color: '#dc2626', fontSize: '0.875rem', margin: '0'}}>Manifest items is not an array</p>
+              <div style={{ backgroundColor: '#fee2e2', border: '1px solid #fecaca', padding: '1rem', borderRadius: '0.75rem' }}>
+                <p style={{ color: '#991b1b', fontWeight: 700, margin: '0' }}>Invalid Manifest</p>
+                <p style={{ color: '#dc2626', fontSize: '0.875rem', margin: '0' }}>Manifest items is not an array</p>
               </div>
             )}
           </div>

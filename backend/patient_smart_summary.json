@@ -3,111 +3,152 @@
     {
       "parameter": "Glucose Fasting",
       "value": "169.0 mg/dL",
-      "status": "HIGH",
+      "reference_range": "70-100 mg/dL",
+      "status": "VERY HIGH",
+      "interpretation": "Significantly elevated fasting glucose, indicative of impaired glucose regulation.",
       "causes": [
         "Insulin resistance",
-        "Insufficient insulin production",
-        "Dietary factors (high sugar/carbohydrate intake)",
-        "Lack of physical activity"
+        "Impaired glucose tolerance",
+        "Prediabetes",
+        "Early Type 2 Diabetes",
+        "Dietary factors"
       ],
       "effects": [
         "Increased risk of Type 2 Diabetes",
-        "Long-term damage to blood vessels, nerves, kidneys, and eyes if uncontrolled"
+        "Increased cardiovascular risk",
+        "Microvascular complications (long-term)"
       ],
-      "clinical_note": "Significantly elevated fasting glucose, strongly suggestive of uncontrolled hyperglycemia, likely Type 2 Diabetes. Requires immediate medical evaluation."
+      "clinical_note": "This very high fasting glucose level, combined with an elevated HbA1c of 6.1%, strongly suggests prediabetes or early Type 2 Diabetes. Requires immediate intervention.",
+      "correlation": {
+        "related_findings": [
+          "HbA1c",
+          "Total Cholesterol"
+        ],
+        "pattern": "Metabolic dysfunction pattern (prediabetes/early diabetes)",
+        "evidence": "Both fasting glucose and HbA1c are elevated, confirming poor glucose control. Also correlates with high total cholesterol, indicating broader metabolic dysregulation."
+      },
+      "trend": "No historical data available for trend analysis."
     },
     {
       "parameter": "HbA1c",
-      "value": "6.1 %",
-      "status": "HIGH",
+      "value": "6.1%",
+      "reference_range": "<5.7%",
+      "status": "BORDERLINE-HIGH",
+      "interpretation": "Elevated HbA1c, falling within the prediabetes range (5.7-6.4%).",
       "causes": [
-        "Poor glycemic control over the past 2-3 months",
-        "Prediabetes or early diabetes"
+        "Prediabetes",
+        "Early Type 2 Diabetes",
+        "Sustained elevated blood glucose",
+        "Insulin resistance"
       ],
       "effects": [
-        "Increased risk of developing Type 2 Diabetes",
-        "Higher risk of diabetes-related complications over time"
+        "Increased risk of progression to Type 2 Diabetes",
+        "Increased cardiovascular risk",
+        "Risk of microvascular complications (nephropathy, retinopathy, neuropathy) over time"
       ],
-      "clinical_note": "Indicates elevated average blood sugar levels over the last few months, consistent with prediabetes or early diabetes. Requires prompt intervention."
+      "clinical_note": "This HbA1c level confirms chronic hyperglycemia, consistent with the very high fasting glucose. Together, these indicate a significant risk for developing overt Type 2 Diabetes and associated complications.",
+      "correlation": {
+        "related_findings": [
+          "Glucose Fasting",
+          "Total Cholesterol"
+        ],
+        "pattern": "Metabolic disorder pattern (prediabetes/early diabetes)",
+        "evidence": "HbA1c and fasting glucose are both elevated, providing strong evidence for impaired glucose metabolism. The elevated total cholesterol further supports a metabolic syndrome risk."
+      },
+      "trend": "No historical data available for trend analysis."
     },
     {
       "parameter": "Total Cholesterol",
       "value": "240.0 mg/dL",
+      "reference_range": "<200 mg/dL",
       "status": "HIGH",
+      "interpretation": "Elevated total cholesterol, increasing cardiovascular risk.",
       "causes": [
-        "Diet high in saturated and trans fats",
+        "Dietary factors (high saturated/trans fats)",
         "Genetic predisposition",
-        "Lack of physical activity",
-        "Obesity"
+        "Metabolic syndrome",
+        "Insulin resistance"
       ],
       "effects": [
-        "Increased risk of atherosclerosis (hardening of arteries)",
-        "Higher risk of heart disease and stroke"
+        "Increased risk of atherosclerosis",
+        "Coronary artery disease",
+        "Stroke",
+        "Peripheral artery disease"
       ],
-      "clinical_note": "Elevated total cholesterol contributes to an increased cardiovascular risk profile. Lifestyle modifications and potential medical management are recommended."
+      "clinical_note": "High total cholesterol contributes to an overall elevated cardiovascular risk, especially in the context of impaired glucose regulation (high fasting glucose and HbA1c). A full lipid panel (LDL, HDL, Triglycerides) is crucial for a complete assessment.",
+      "correlation": {
+        "related_findings": [
+          "Glucose Fasting",
+          "HbA1c"
+        ],
+        "pattern": "Dyslipidemia within a metabolic syndrome context",
+        "evidence": "Elevated total cholesterol, combined with impaired glucose metabolism (high fasting glucose and HbA1c), suggests a broader metabolic syndrome pattern, significantly increasing cardiovascular risk."
+      },
+      "trend": "No historical data available for trend analysis."
     }
   ],
   "normal_findings": [
     {
       "parameter": "Hemoglobin",
       "value": "14.5 g/dL",
-      "clinical_interpretation": "Hemoglobin levels are within the normal range, indicating no signs of anemia."
+      "reference_range": "13-17 g/dL",
+      "clinical_interpretation": "Normal hemoglobin level, indicating no anemia."
     },
     {
       "parameter": "Creatinine",
       "value": "0.9 mg/dL",
-      "clinical_interpretation": "Creatinine levels are normal, suggesting healthy kidney function at this time."
+      "reference_range": "0.7-1.3 mg/dL",
+      "clinical_interpretation": "Normal creatinine level, suggesting healthy kidney function at this time. Important to monitor given metabolic concerns."
     }
   ],
   "overall_assessment": {
-    "risk_level": "HIGH",
+    "risk_level": "High",
     "key_concerns": [
-      "High risk of Type 2 Diabetes (or confirmed prediabetes/early diabetes)",
-      "Elevated cardiovascular risk due to high cholesterol and blood sugar"
+      "Prediabetes/Early Type 2 Diabetes (based on elevated Glucose Fasting and HbA1c)",
+      "Dyslipidemia (elevated Total Cholesterol)",
+      "Increased cardiovascular risk due to combined metabolic abnormalities",
+      "Potential for progression to overt Type 2 Diabetes and associated complications"
     ],
     "immediate_actions": [
-      "Consult a physician (Endocrinologist or General Practitioner) for comprehensive evaluation and diagnosis.",
-      "Begin immediate lifestyle modifications."
+      "Comprehensive lifestyle intervention (diet, exercise, weight management)",
+      "Further diagnostic workup (full lipid panel, oral glucose tolerance test if needed)",
+      "Cardiovascular risk assessment",
+      "Consider pharmacotherapy if lifestyle changes are insufficient or risk is very high"
+    ],
+    "systems_affected": [
+      "Metabolic",
+      "Cardiovascular"
     ]
   },
   "follow_up_plan": [
     {
-      "timeline": "Immediate / Within 1 Month",
-      "test_name": "Fasting Lipid Profile (LDL, HDL, Triglycerides)",
-      "rationale": "To get a complete picture of cholesterol levels and further assess cardiovascular risk."
+      "timeline": "Immediate (within 1-2 weeks)",
+      "test_name": "Full Lipid Panel (LDL, HDL, Triglycerides), Repeat Fasting Glucose",
+      "rationale": "To fully assess dyslipidemia and confirm current glycemic status."
     },
     {
-      "timeline": "Immediate / Within 1 Month",
-      "test_name": "Oral Glucose Tolerance Test (OGTT) or repeat Fasting Glucose",
-      "rationale": "To confirm diabetes diagnosis and assess glucose metabolism more thoroughly."
+      "timeline": "1-3 Months",
+      "test_name": "Repeat HbA1c, Blood Pressure Monitoring",
+      "rationale": "To reassess glycemic control after initial interventions and screen for hypertension."
     },
     {
-      "timeline": "Immediate / Within 1 Month",
-      "test_name": "Kidney Function Tests (eGFR, Urine Microalbumin)",
-      "rationale": "To assess for any early signs of kidney involvement due to elevated blood sugar."
-    },
-    {
-      "timeline": "3 Months",
-      "test_name": "HbA1c",
-      "rationale": "To monitor the effectiveness of lifestyle changes and/or medication in controlling blood sugar levels."
+      "timeline": "Annually",
+      "test_name": "Comprehensive Metabolic Panel, Urinalysis (for microalbuminuria), Eye exam, Foot exam",
+      "rationale": "Screen for long-term complications of diabetes and metabolic syndrome."
     }
   ],
   "lifestyle_modifications": [
     {
       "category": "Diet",
-      "recommendation": "Adopt a balanced diet low in refined sugars, processed foods, saturated and trans fats. Increase intake of whole grains, lean proteins, fruits, and vegetables. Focus on portion control."
+      "recommendation": "Adopt a low glycemic index diet, reduce intake of refined carbohydrates, saturated and trans fats. Increase fiber intake (e.g., whole grains, fruits, vegetables) and lean proteins."
     },
     {
       "category": "Exercise",
-      "recommendation": "Engage in at least 150 minutes of moderate-intensity aerobic exercise per week (e.g., brisk walking, cycling) and incorporate strength training 2-3 times a week."
+      "recommendation": "Engage in at least 150 minutes per week of moderate-intensity aerobic exercise (e.g., brisk walking, cycling) and incorporate resistance training 2-3 times per week."
     },
     {
-      "category": "Weight Management",
-      "recommendation": "Work towards achieving and maintaining a healthy body weight, as this significantly impacts blood sugar and cholesterol levels."
-    },
-    {
-      "category": "Habits",
-      "recommendation": "Avoid smoking and limit alcohol consumption. Practice stress management techniques (e.g., meditation, yoga)."
+      "category": "Lifestyle",
+      "recommendation": "Target a 5-10% reduction in body weight. Monitor blood glucose at home as advised. Avoid smoking and limit alcohol consumption. Manage stress effectively."
     }
   ]
 }
